@@ -165,6 +165,7 @@ filter(murders, rate <= 0.71)
 # 4.3.3 Selecting columns with ```select```
 
 Although our data table only has six columns, some data tables include hundreds. If we want to view just a few, we can use the **dplyr** ```select``` function. In the code below we select three columns, assign this to a new object and then filter the new object:
+
 ```{r}
 new_table <- select(murders, state, region, rate)
 filter(new_table, rate <= 0.71)
@@ -278,6 +279,8 @@ This line of code is equivalent to the two lines of code above. What is going on
 
 In general, the pipe *sends* the result of the left side of the pipe to be the first argument of the function on the right side of the pipe. Here is a very simple example:
 ```{r}
+library(tidyverse)
+library(dplyr)
 16 %>% sqrt()
 ```
 
@@ -320,6 +323,8 @@ select(my_states, state, rate, rank)
 
 The pipe ```%>%``` permits us to perform both operations sequentially without having to define an intermediate variable ```my_states```. We therefore could have mutated and selected in the same line like this:
 ```{r}
+library(tidyverse)
+library(dplyr)
 mutate(murders, rate =  total / population * 100000, 
        rank = rank(-rate)) %>%
   select(state, rate, rank)
@@ -329,7 +334,11 @@ Notice that ```select``` no longer has a data frame as the first argument. The f
 
 Repeat the previous exercise, but now instead of creating a new object, show the result and only include the state, rate, and rank columns. Use a pipe ```%>%``` to do this in just one line.
 ```{r}
-murders%>% mutate(murders, rate = total / population *100000, rank = rank(-rate))%>%select(state, rate, rank)
+library(tidyverse)
+library(dplyr)
+mutate( murders, rate = total / population *100000, 
+        rank = rank(-rate)) %>% 
+  select(state, rate, rank)
 
 ```
 
