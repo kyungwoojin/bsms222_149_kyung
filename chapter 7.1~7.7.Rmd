@@ -142,6 +142,7 @@ p + geom_point(aes(population/10^6, total), size = 3) +
   geom_text(aes(population/10^6, total, label = abb), nudge_x = 1.5)
 ```
 This is preferred as it makes it easier to read the text. In Section 7.11 we learn a better way of assuring we can see the points and the labels.
+
 # 7.6 Global versus local aesthetic mappings
 In the previous line of code, we define the mapping ```aes(population/10^6, total)``` twice, once in each geometry. We can avoid this by using a global aesthetic mapping. We can do this when we define the blank slate ```ggplot``` object. Remember that the function ```ggplot``` contains an argument that permits us to define aesthetic mappings:
 ```{r}
@@ -165,6 +166,7 @@ p + geom_point(size = 3) +
   geom_text(aes(x = 10, y = 800, label = "Hello there!"))
 ```
 Clearly, the second call to ```geom_text``` does not use ```population``` and ```total```.
+
 # 7.7 Scales
 First, our desired scales are in log-scale. This is not the default, so this change needs to be added through a scales layer. A quick look at the cheat sheet reveals the ```scale_x_continuous``` function lets us control the behavior of scales. We use them like this:
 ```{r}
