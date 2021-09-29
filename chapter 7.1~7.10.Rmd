@@ -197,6 +197,7 @@ p + geom_point(size = 3) +
   ggtitle("US Gun Murders in 2010")
 ```
 We are almost there! All we have left to do is add color, a legend, and optional changes to the style.
+
 # 7.9 Categories as colors
 We can change the color of the points using the ```col``` argument in the ```geom_point``` function. To facilitate demonstration of new features, we will redefine ```p``` to be everything except the points layer:
 ```{r}
@@ -221,6 +222,7 @@ p + geom_point(aes(col=region), size = 3)
 The ```x``` and ```y``` mappings are inherited from those already defined in ```p```, so we do not redefine them. We also move ```aes``` to the first argument since that is where mappings are expected in this function call.
 
 Here we see yet another useful default behavior: **ggplot2** automatically adds a legend that maps color to region. To avoid adding this legend we set the ```geom_point``` argument ```show.legend = FALSE```.
+
 # 7.10 Annotation, shapes, and adjustments
 We often want to add shapes or annotation to figures that are not derived directly from the aesthetic mapping; examples include labels, boxes, shaded areas, and lines.
 
