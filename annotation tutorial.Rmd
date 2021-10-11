@@ -77,7 +77,9 @@ class(d)
 You will find out that this is ```GRanges``` class. This is from the package Genomic Range, specifically dealing with genomic datasets but we are not heading into this in this tutorial. So please find this information if you are serious on this. 
 We are converting ```d``` into a data frame as following:
 ```{r}
+library(tidyverse)
 d = d %>% as.data.frame()
+d_copy<-d
 ```
 Let's overview few lines from the  data frame, and explore what you get in this object.
 ```{r}
@@ -195,58 +197,57 @@ Transcript support level (TSL)
 
 1. Computes the number of transcripts per gene. What is the mean number of transcripts per gene? What is the quantile (25%, 50%, 75%) for these numbers? Which gene has the greatest number of transcript?
 ```{r}
-library(tidyverse)
-d%>%filter(type=="transcript")%>%count(gene_name)%>%summarize(mean(n), quantile(n,0.25),quantile(n,0.5),quantile(n,0.75),gene_name[which.max(n)])
+d_copy%>%filter(type=="transcript")%>%count(gene_name)%>%summarize(mean(n), quantile(n,0.25),quantile(n,0.5),quantile(n,0.75),gene_name[which.max(n)])
 ```
 2. Compute the number of transcripts per gene among gene biotypes. For example, compare the number of transcript per gene between protein-coding genes, long noncoding genes, pseudogenes.
 ```{r}
-d%>%filter(type=="transcript")%>%group_by(gene_type)%>%count(gene_name)
+d_copy%>%filter(type=="transcript")%>%group_by(gene_type)%>%count(gene_name)
 ```
 
 3. Final task is to compute the number of transcripts per gene per chromosome.
 ```{r}
-d%>%filter(type=="transcript")%>%group_by(seqnames)%>%count(gene_name)
+d_copy%>%filter(type=="transcript")%>%group_by(seqnames)%>%count(gene_name)
 ```
 
 ## 3.2. Gene length in the GENCODE
 1. What is the average length of human genes?
 ```{r}
-d%>%filter(type=="gene")%>%summarize(average=mean(width))
+d_copy%>%filter(type=="gene")%>%summarize(average=mean(width))
 ```
 
 2. Is the distribution of gene length differed by autosomal and sex chromosomes? 
 Please calculate the quantiles (0%, 25%, 50%, 75%, 100%) of the gene length for each group.
 ```{r}
-d%>%filter(type=="gene")%>%select(seqnames, width)%>%filter(seqnames!="chrM")%>%mutate(chr_type=ifelse(seqnames%in%c("chrX", "chrY"), "sex", "auto"))%>%summarize(auto_quantile=quantile(width[chr_type=="auto"], c(0, 0.25, 0.5, 0.75, 1)), sex_quantile=quantile(width[chr_type=="sex"], c(0, 0.25, 0.5, 0.75, 1)))
+d_copy%>%filter(type=="gene")%>%select(seqnames, width)%>%filter(seqnames!="chrM")%>%mutate(chr_type=ifelse(seqnames%in%c("chrX", "chrY"), "sex", "auto"))%>%summarize(auto_quantile=quantile(width[chr_type=="auto"], c(0, 0.25, 0.5, 0.75, 1)), sex_quantile=quantile(width[chr_type=="sex"], c(0, 0.25, 0.5, 0.75, 1)))
 ```
 
 3. Is the distribution of gene length differed by gene biotype? Please calculate the quantiles (0%, 25%, 50%, 75%, 100%) of the gene length for each group.
 ```{r}
-d%>%filter(type=="gene")%>%select(gene_type, width)%>% summarize(gene_length_quantile=quantile(width, c(0, 0.25, 0.5, 0.75, 1)))
+d_copy%>%filter(type=="gene")%>%select(gene_type, width)%>% summarize(gene_length_quantile=quantile(width, c(0, 0.25, 0.5, 0.75, 1)))
 ```
 
 ## 3.3. Transcript support levels (TSL)
 1. The GENCODE TSL provides a consistent method of evaluating the level of support that a GENCODE transcript annotation is actually expressed in humans.
 With transcript, how many transcripts are categorized for each TSL?
 ```{r}
-d%>% filter(type=="transcript")%>% filter(transcript_support_level!="NA")%>%nrow()
+d_copy%>% filter(type=="transcript")%>% filter(transcript_support_level!="NA")%>%nrow()
 ```
 
 2. From the first question, please count the number of transcript for each TSL by gene biotype.
 ```{r}
-d%>% filter(type=="transcript")%>% filter(transcript_support_level!="NA")%>%count(transcript_support_level, gene_type)
+d_copy%>% filter(type=="transcript")%>% filter(transcript_support_level!="NA")%>%count(transcript_support_level, gene_type)
 ```
 
 3. From the first question, please count the number of transcript for each TSL by source.
 ```{r}
-d%>% filter(type=="transcript")%>% filter(transcript_support_level!="NA")%>%count(transcript_support_level, source)
+d_copy%>% filter(type=="transcript")%>% filter(transcript_support_level!="NA")%>%count(transcript_support_level, source)
 ```
 
 ## 3.4. CCDS in the GENCODE
 
 1. With gene, please create a data frame with the columns - gene_id, gene_name, hgnc_id, gene_type, chromosome, start, end, and strand. Then, please create new columns for presence of hgnc and ccds. For example, you can put 1 in the column isHgnc, if hgnc annotation is avaiable, or 0 if not. Then, you can put 1 in the column isCCDS, if ccds annotation is avaiable, or 0 if not.
 ```{r}
-d3<-d%>%filter(type=="gene")%>%select(gene_id, gene_name, hgnc_id, gene_type, seqnames, start, end, strand)%>%mutate(isHgnc=ifelse(is.na(hgnc_id),"0","1"), isCCDS=ifelse(is.na(d$ccdsid[d$type=="gene"]),"0","1"))
+d3<-d_copy%>%filter(type=="gene")%>%select(gene_id, gene_name, hgnc_id, gene_type, seqnames, start, end, strand)%>%mutate(isHgnc=ifelse(is.na(hgnc_id),"0","1"), isCCDS=ifelse(is.na(d_copy$ccdsid[d_copy$type=="gene"]),"0","1"))
 ```
 
 2. Please count the number of hgnc by gene biotypes.
@@ -256,38 +257,38 @@ d3%>%filter(isHgnc==1)%>%select(hgnc_id, gene_type)%>%count(gene_type)
 
 3. Please count the number of hgnc by level. Please note that level in this question is not TSL. Please find information in this link: 1 (verified loci), 2 (manually annotated loci), 3 (automatically annotated loci).
 ```{r}
-d%>%filter(type=="gene")%>%select(level, hgnc_id)%>%filter(hgnc_id!="NA")%>%count(level)
+d_copy%>%filter(type=="gene")%>%select(level, hgnc_id)%>%filter(hgnc_id!="NA")%>%count(level)
 ```
 
 ## 3.5. Transcripts in the GENCODE
 1. Which gene has the largest number of transcripts?
 ```{r}
-d%>%filter(type=="transcript")%>%count(gene_name)%>%summarize(gene_name[which.max(n)])
+d_copy%>%filter(type=="transcript")%>%count(gene_name)%>%summarize(gene_name[which.max(n)])
 ```
 
 2. Please calculate the quantiles (0%, 25%, 50%, 75%, 100%) of the gene length for protein coding genes and long noncoding genes.
 ```{r}
-d%>%filter(type=="gene")%>%summarize(protein_coding_genes=quantile(width[gene_type=="protein_coding"], c(0,0.25,0.5,0.75,1)), long_noncoding_genes= quantile(width[gene_type=="lncRNA"], c(0,0.25,0.5,0.75,1)))
+d_copy%>%filter(type=="gene")%>%summarize(protein_coding_genes=quantile(width[gene_type=="protein_coding"], c(0,0.25,0.5,0.75,1)), long_noncoding_genes= quantile(width[gene_type=="lncRNA"], c(0,0.25,0.5,0.75,1)))
 ```
 
 3. Please count the number of transcripts by chromosomes.
 ```{r}
-d%>%filter(type=="transcript")%>%count(seqnames)
+d_copy%>%filter(type=="transcript")%>%count(seqnames)
 ```
 
 ## 3.6. Autosomal vs. Sex chromosomes.
 1. Please calculate the number of genes per chromosome.
 ```{r}
-d%>%filter(type=="gene")%>%count(seqnames)
+d_copy%>%filter(type=="gene")%>%count(seqnames)
 ```
 
 2. Please compare the number of genes between autosomal and sex chromosome (Mean, Median).
 ```{r}
-d%>%filter(type=="gene")%>%filter(seqnames!="chrM")%>%mutate(chr_type=ifelse(seqnames%in%c("chrX", "chrY"), "sex", "auto"))%>%count(chr_type)
+d_copy%>%filter(type=="gene")%>%filter(seqnames!="chrM")%>%mutate(chr_type=ifelse(seqnames%in%c("chrX", "chrY"), "sex", "auto"))%>%count(chr_type)
 ```
 
 3. Please divide the genes into groups ‘protein coding’ and ‘long noncoding’, and then compare the number of genes in each chromosomes within groups.
 ```{r}
-d%>%filter(type=="gene"& gene_type%in%c("protein_coding", "lncRNA"))%>%count(seqnames, gene_type)
+d_copy%>%filter(type=="gene"& gene_type%in%c("protein_coding", "lncRNA"))%>%count(seqnames, gene_type)
 ```
 
