@@ -1,0 +1,128 @@
+---
+title: "visualization and correlation between Angiolympathicinvasion and RNA"
+output: html_notebook
+---
+
+During oncology class, I came across a journal based on angiogenesis which made me interested. Due to this, I wanted to further investigate angiogenesis in this portfolio. According to this journal, the correlation between protein phosphorylation and tumor stage was evident. However, the correlation between Angiolymphatic invasion and protein phosphotyation was difficult to see. 
+Angiolymphatic invasion is known to exist highly in late stage tumors. Therefore, in order to observe a clearer correlation, I thought that utilising RNA level would be a better than protein phosphorylation. To carry out the investigation I had to merge two data sheets each containing Angiolympahitc invasion and RNA enrichment chart. 
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(ggplot2)
+library(ggExtra)
+library(dplyr)
+library(ggside)
+library(forcats)
+library(plyr)
+library(scales)
+library(hrbrthemes)
+```
+
+```{r}
+omics<-read_excel('midexercise/1-s2.0-S0092867420307431-mmc6.xlsx', sheet=2,col_names = TRUE)
+patient_id<-colnames(omics)
+omics<-t(omics)
+colnames(omics)<-omics[1,]
+omics<-omics[-1,]
+colnames(omics)<- gsub('\\(.*?\\)', '', colnames(omics))
+omics<-as_tibble(omics) %>%
+  mutate(id=patient_id[2:length(patient_id)])
+```
+
+```{r}
+transcript<-read_excel('midexercise/1-s2.0-S0092867420307431-mmc1.xlsx',sheet=5)
+patient_id<-colnames(transcript)
+transcript<-t(transcript)
+colnames(transcript)<-transcript[1,]
+transcript<-transcript[-1,]
+colnames(transcript)<- gsub('\\(.*?\\)', '', colnames(transcript))
+transcript<-as_tibble(transcript) %>%
+  mutate(id=patient_id[2:length(patient_id)])
+log2TN_median<-transcript[2,]
+```
+
+```{r}
+# merged the data transcript and omics with idenctical column "id"
+merged<-omics%>%
+  filter(!is.na(AngiolymphaticInvasion))%>%
+  select(AngiolymphaticInvasion, id)%>%
+  inner_join(transcript,.,by='id')%>%
+  relocate(c(id, AngiolymphaticInvasion))%>%
+  filter(AngiolymphaticInvasion%in%c("yes", "no"))
+```
+
+```{r}
+# Welch Two Sample t-test to find out p-values (Null hypothesis: "ttested RNA correlates with Angiolymphatic invasion")
+merged$AngiolymphaticInvasion<-as.factor(merged$AngiolymphaticInvasion)
+merged_for_ttest<-merged[,2:ncol(merged)]%>%
+as.data.frame(stringsAsFactors = "False")
+t.return<-sapply(merged_for_ttest[-1], 
+function(x) 
+{
+    Tx = t.test(as.numeric(as.character(x)) ~ merged_for_ttest$AngiolymphaticInvasion)
+    return(data.frame(Tx$p.value))
+})%>%sapply(.,unlist)
+
+```
+
+```{r}
+rna_list<-colnames(merged)%>%as.vector
+ttest<-cbind(rna=rna_list[3:length(rna_list)],p.value=t.return)%>%as_tibble()%>%rename(.,c("rna"="RNA","log2TN"="log2TN"))
+```
+
+Process of data manipulation
+```{r warning = FALSE, message = FALSE}
+merged_pivot<-merged%>%pivot_longer(.,cols=-c(id,AngiolymphaticInvasion),names_to="RNA", values_to="log2TN")%>%inner_join(.,ttest,by="RNA")%>%group_by(AngiolymphaticInvasion)
+merged_pivot$log2TN=as.numeric(as.character(merged_pivot$log2TN))
+summary(merged_pivot$log2TN)
+str(merged_pivot)
+#rescale values for all variables in melted data frame
+merged_pivot_RNA<-merged_pivot$RNA
+melt_merged_pivot<-merged_pivot%>%ddply(., .(RNA),transform, rescale = rescale(log2TN))%>%select(id, AngiolymphaticInvasion, log2TN, p.value, rescale)%>%arrange(id)%>%mutate(RNA=merged_pivot_RNA)
+melt_merged_pivot$p.value=as.numeric(melt_merged_pivot$p.value)
+```
+
+```{r}
+library(data.table)
+other_mean<-aggregate(log2TN~RNA+AngiolymphaticInvasion,merged_pivot, mean)%>%arrange(RNA)%>%ddply(., .(RNA),mutate, FC= shift(log2TN)-log2TN)%>%filter(!is.na(FC))%>%merge(.,ttest,"RNA")%>%mutate(expression=ifelse(p.value<0.05&FC>0.6,"UP" ,ifelse(p.value<0.05&FC<(-0.6),"down","none")))%>%mutate(label=ifelse(expression!="none", RNA, NA))
+other_mean$p.value<-log(as.numeric(as.character(other_mean$p.value)),2)
+other_mean<-rename(other_mean,c("p.value"="log2p.value"))
+```
+
+Draw a volcano plot with p values smaller than 0.05 and expression difference by angiolymphatic invasion.
+```{r}
+mycolors <- c("blue", "red", "black")
+names(mycolors) <- c("down", "UP", "none")
+other_mean%>%ggplot(., aes(x=FC, y=-log2p.value))+ 
+  geom_point(aes(color=as.factor(expression)))+
+  theme_minimal()+
+  geom_vline(xintercept=c(-0.6, 0.6), col="red") +
+  geom_hline(yintercept=-log2(0.05), col="red")+
+  scale_colour_manual(values=mycolors)+
+  geom_text(aes(label=label),check_overlap = T)
+```
+Through this volcano plot, I chose RNA with p values smaller than 0.05 that shows a dramatic difference between "yes" and "no" for angiolymphatic invasion. The "rescale" on the right side of the heatmap represents normalisation of log2TN within RNA. This is beacause I want to find the correlation between "yes" and "no" in angiolymphatic invasion instead of log2TN.
+```{r warning = FALSE, message = FALSE}
+# viusalize the heatmap that represent RNA expression that have correlation with AngiolympathInvasion (p-value<0.01)
+mean_log2TN<-aggregate(log2TN~RNA, merged_pivot,mean)%>%rename(c("log2TN"="mean"))
+mean_log2TN$RNA<-as.character(mean_log2TN$RNA)
+melt_merged_pivot%>%
+  mutate(Angtype=ifelse(AngiolymphaticInvasion=="no", 2, 1))%>%
+  filter(RNA%in%other_mean$label)%>%
+  merge(.,other_mean,"RNA",incomparables=NULL)%>%
+  filter(p.value<0.01)%>%
+  merge(.,mean_log2TN,"RNA",incomparables=NULL)%>%
+  ggplot(aes(x=fct_reorder(id, Angtype), y=fct_reorder(RNA,expression)))+
+  geom_tile(aes(fill=`rescale`))+
+theme(axis.text.x=element_text(angle=90, size=4, vjust=0.3),axis.text.y=element_text( size=5))+ 
+scale_fill_gradient2(low=muted("blue"), mid="white", high="yellow", midpoint=0.5)+
+xlab(label = "patient")+
+ylab(label="RNA")+
+geom_xsidetile(aes(y=0, xfill=AngiolymphaticInvasion.x))+
+scale_xfill_manual(values=c("gray", "black"))
+```
+
+The possible limitation of this portfolio can be seen on the volcano plot. Both points on the end of the right and left side is not colored as instructed. This could be one of the investigation which can be looked into further. Also, manipulating the data was difficult when the class of different columns in data frames were different.
+For further investigation, I would like to investigate the correlation between pathway and angiolymphatic.
+
